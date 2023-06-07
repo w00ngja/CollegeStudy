@@ -5,7 +5,7 @@ import folium
 from scipy.spatial import Voronoi, voronoi_plot_2d
 import matplotlib.pyplot as plt
 
-# 데이터 로드
+# 데이터 로드 (샘플 시뮬레이션에서는 사용하지 않음)
 df = pd.read_csv('population_housing_density_data.csv')
 
 # 경도
@@ -15,7 +15,7 @@ max_x =  127.5
 min_y =  36.2
 max_y =  36.5
 
-# 후보 위치 데이터
+# 후보 위치 데이터 함수 : 보로노이 연산을 위해 대전 인근에 랜덤 노드를 뿌림
 def generate_candidate_locations(num_locations):
     candidate_locations = []
 
@@ -29,28 +29,30 @@ def generate_candidate_locations(num_locations):
 candidate_locations = generate_candidate_locations(1000)
 vor = Voronoi(candidate_locations)
 
-# 가중치 설정
-w_population = 0.4  # 인구밀도 가중치
-w_housing = 0.2  # 주택밀도 가중치
-w_area = 0.4  # 다각형 면적 가중치
+# 가중치 설정 : 인구밀도, 주책밀도, 다각형의 넓이를 평가 기준으로 지정하였음
+w_population = 0.4
+w_housing = 0.2
+w_area = 0.4
 
-# 주택밀도 데이터 예시 (100개)
+# 주택 / 인도밀도 샘플 데이터
+# 대전 근처 위치(경도,위도)에서 (1,10) 영역의 값을 임의로 100개 생성해주었음
 housing_density = []
 for _ in range(100):
-    latitude = random.uniform(36.2, 36.5)  # 대전 근처 위도 범위 예시
-    longitude = random.uniform(127.3, 127.5)  # 대전 근처 경도 범위 예시
-    density = random.randint(1, 10)  # 임의의 주택밀도 예시
+    latitude = random.uniform(36.2, 36.5)
+    longitude = random.uniform(127.3, 127.5)
+    density = random.randint(1, 10)
     housing_density.append((latitude, longitude, density))
 
-# 인구밀도 데이터 예시 (100개)
 population_density = []
 for _ in range(100):
-    latitude = random.uniform(36.2, 36.5)  # 대전 근처 위도 범위 예시
-    longitude = random.uniform(127.3, 127.5)  # 대전 근처 경도 범위 예시
-    density = random.randint(100, 1000)  # 임의의 인구밀도 예시
+    latitude = random.uniform(36.2, 36.5)
+    longitude = random.uniform(127.3, 127.5)
+    density = random.randint(100, 1000)
     population_density.append((latitude, longitude, density))
 
-# 평가 기준에 사용할 다각형의 넓이 계산
+# 보르노이 다각형 각 영역의 넓이 계산 : 셀 꼭짓점 간 신발끈 연산을 톻하여
+# - vor.regions : 각 셀 인덱스 집합
+# - vor.virtices[region] : 특정 셀의 꼭지점 정보
 polygon_areas = []
 for region in vor.regions:
     if len(region) > 0 and -1 not in region:
@@ -58,13 +60,12 @@ for region in vor.regions:
         polygon_area = abs(np.sum(vertices[:, 0] * np.roll(vertices[:, 1], 1) - vertices[:, 1] * np.roll(vertices[:, 0], 1))) / 2
         polygon_areas.append(polygon_area)
 
-# 충전소 위치 선택을 위한 평가 기준 함수 정의
+# 부여한 가중치에 따라 최적 입지 선정을 위한 평가 기준 계산
 def evaluation_criteria(population_density, housing_density, polygon_area, w_population, w_housing, w_area):
-    # 평가 기준 계산
     score = w_population * population_density + w_housing * housing_density + w_area * polygon_area
     return score
 
-# 보로노이 다각형 중심점을 후보지로 선택
+# 각 셀의 중심점을 후보지로 선택
 charging_station_locations = vor.points
 
 
