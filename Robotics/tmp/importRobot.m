@@ -1,0 +1,1 @@
+robot = importrobot('DOF2.slx')
